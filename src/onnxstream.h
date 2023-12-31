@@ -903,7 +903,7 @@ public:
     bool m_do_multipart_quantization = false;
     size_t m_multipart_threshold = -1;
     bool m_fuse_ops_in_attention = false;
-    size_t m_attention_fused_ops_parts = 2;
+    size_t m_attention_fused_ops_parts = 1;
     std::vector<std::string> m_extra_outputs;
     bool m_force_fp16_storage = false;
     std::set<std::string> m_force_uint8_storage_set;
