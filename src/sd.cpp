@@ -1570,7 +1570,12 @@ void sdxl_decoder(ncnn::Mat& sample, const std::string& output_png_path, bool ti
             {
                 for (int y = 0; y < 32; y++)
                     for (int x = 0; x < 32; x++)
-                        *dst++ = src[(sy + y) * 60 + sx + x];
+                    {
+                        if (sy+y >= 60 || sx+x >= 100)
+                            *dst++ = 0;
+                        else
+                            *dst++ = src[(sy + y) * 100 + sx + x];
+                    }
 
                 src += 60 * 100;
             }
@@ -1604,7 +1609,11 @@ void sdxl_decoder(ncnn::Mat& sample, const std::string& output_png_path, bool ti
                     for (int x = 0; x < 256; x++)
                     {
                         float s = *src++;
-                        float& d = dst[(dy + y) * 480 + dx + x];
+
+                        if (dy+y >= 480 || dx+x >= 800)
+                            continue;
+
+                        float& d = dst[(dy + y) * 800 + dx + x];
                         float f = 1;
 
                         if (dy && y < 64)
@@ -1617,21 +1626,29 @@ void sdxl_decoder(ncnn::Mat& sample, const std::string& output_png_path, bool ti
             }
         };
 
-        int inc = g_main_args.m_turbo ? 16 : 24;
-        for (int y = 0; y <= 60 - 32; y += inc)
-            for (int x = 0; x <= 100 - 32; x += inc)
+        // int inc = g_main_args.m_turbo ? 16 : 24;
+        for (int y = 0; y <= 60/32*32; y += 16)
+            for (int x = 0; x <= 100/32*32; x += 16)
+            {
+                std::cout << x << " " << y << std::endl;
                 blend(slice_and_inf(x, y), x * 8, y * 8);
+            }
     }
 
+    std::cout << "Calc" << std::endl;
     constexpr float _mean_[3] = { -1.0f, -1.0f, -1.0f };
     constexpr float _norm_[3] = { 127.5f, 127.5f, 127.5f };
     res.substract_mean_normalize(_mean_, _norm_);
 
     {
         std::vector<std::uint8_t> buffer;
-        buffer.resize(480 * 800 * 3);
+        std::cout << "Resize" << std::endl;
+        buffer.resize(800 * 480 * 3);
+        std::cout << "To pixels" << std::endl;
         res.to_pixels(buffer.data(), ncnn::Mat::PIXEL_RGB);
+        std::cout << "Save image" << std::endl;
         save_png(buffer.data(), 800, 480, 0, output_png_path.c_str());
+        std::cout << "Done" << std::endl;
     }
 }
 
@@ -1943,8 +1960,7 @@ int main(int argc, char** argv)
             {
                 auto vec = ::read_file<tensor_vector<float>>(g_main_args.m_decode_latents.c_str());
 
-                size_t latent_dim = g_main_args.m_turbo ? 64 : 128;
-                ncnn::Mat sample(latent_dim, latent_dim, 4);
+                ncnn::Mat sample(60, 100, 4);
                 memcpy((float*)sample, vec.data(), sample.total() * sizeof(float));
 
                 sdxl_decoder(sample, g_main_args.m_output, /* tiled */ g_main_args.m_tiled);
