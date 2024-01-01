@@ -6097,10 +6097,12 @@ void Model::run()
                 sizeof_element = sizeof(uint16_t);
             }
 
+			size_t _m_attention_fused_ops_parts = m_attention_fused_ops_parts;
             if (q.m_shape[1] % m_attention_fused_ops_parts)
-                throw std::invalid_argument(op.m_type + ": m_attention_fused_ops_parts is not valid.");
+				_m_attention_fused_ops_parts = 1;
+                // throw std::invalid_argument(op.m_type + ": m_attention_fused_ops_parts is not valid.");
 
-            std::vector<size_t> aux_shape({ q.m_shape[1] / m_attention_fused_ops_parts, k.m_shape[2] });
+            std::vector<size_t> aux_shape({ q.m_shape[1] / _m_attention_fused_ops_parts, k.m_shape[2] });
 
             size_t aux_num_els = 1;
             for (auto& s : aux_shape)
@@ -6109,11 +6111,11 @@ void Model::run()
             tensor_vector<uint8_t> aux_0 = create_tensor_vector<uint8_t>(aux_num_els * sizeof_element);
             tensor_vector<uint8_t> aux_1 = create_tensor_vector<uint8_t>(aux_num_els * sizeof_element);
 
-            std::vector<size_t> q_part_shape({ q.m_shape[1] / m_attention_fused_ops_parts, q.m_shape[2] });
+            std::vector<size_t> q_part_shape({ q.m_shape[1] / _m_attention_fused_ops_parts, q.m_shape[2] });
 
             for (size_t i = 0; i < n; i++)
             {
-                for (size_t j = 0; j < m_attention_fused_ops_parts; j++)
+                for (size_t j = 0; j < _m_attention_fused_ops_parts; j++)
                 {
                     std::vector<size_t> result_shape;
 
